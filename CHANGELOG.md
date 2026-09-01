@@ -16,14 +16,18 @@ Initial release of shahcompbio/nf-pindel, the Nextflow port of the
 - `--flat_publish` to reproduce the `toil_pindel` output layout.
 - `--seqtype`, exposing a cgpPindel option `toil_pindel` never passed. Defaults
   to `WGS`, which is what cgpPindel used regardless.
-- nf-test suite covering the downstream result contract, the call set, and that
-  flagging genuinely populates the FILTER column.
+- Two execution shapes, selected by `--scatter_by_contig` (default `true`): a
+  per-contig scatter reproducing how `toil_pindel` distributed cgpPindel across
+  the cluster, and an unstaged single run per pair. Verified to produce identical
+  output.
+- nf-test suite covering both paths, the downstream result contract, the call
+  set, and that flagging genuinely populates the FILTER column.
 
 ### Changed from toil_pindel
 
-- **cgpPindel runs unstaged, once per pair**, rather than as five Toil stages
-  driven through `-process`/`-index`. Same tool and version, so the same output;
-  parallelism becomes per-node rather than per-contig.
+- **toil's five stages become three**: `pindel` and `pin2vcf` fuse because they
+  are sequential on one contig's data, and `merge`/`flag` fuse because flag reads
+  merge's output. Same tool and version, so the same output.
 - `--filter` is renamed `--filter_rules`.
 - `--tgd` is replaced by explicit `--pindel_cpus` / `--pindel_memory`; it only
   ever changed Toil resource requests and never reached cgpPindel.

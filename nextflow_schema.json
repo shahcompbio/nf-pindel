@@ -329,7 +329,8 @@
                 "pindel_cpus": {
                     "type": "integer",
                     "description": "Cores for cgpPindel, passed as -cpus. cgpPindel recommends at most 4 during its input stage.",
-                    "fa_icon": "fas fa-microchip"
+                    "fa_icon": "fas fa-microchip",
+                    "help_text": "Unstaged path only (--scatter_by_contig false); the scattered path is one contig per task on one core. Do not set this low: a contig cannot be split, so the longest contig is the critical path in both shapes, and below roughly 13 cores the unstaged path becomes core-bound. cgpPindel's 'max 4 during input' note does not apply, since that stage has two work items and is capped internally."
                 },
                 "pindel_memory": {
                     "type": "string",
@@ -337,6 +338,13 @@
                     "description": "Memory for cgpPindel, e.g. '30.GB'.",
                     "help_text": "toil_pindel used --tgd to request 6G instead of 30G for targeted data.",
                     "fa_icon": "fas fa-memory"
+                },
+                "scatter_by_contig": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run one cgpPindel task per contig instead of one per pair.",
+                    "help_text": "True reproduces how toil_pindel scattered cgpPindel across the cluster: many single-core tasks. False runs pindel.pl once per pair and lets cgpPindel thread internally across --pindel_cpus, which is what cancerit's own Nextflow does. Both produce the same output; they differ in scheduling shape.",
+                    "fa_icon": "fas fa-project-diagram"
                 }
             }
         }

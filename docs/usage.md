@@ -72,12 +72,32 @@ e.g. `'NC_007605,hs37d5,GL%'`.
 passed it, so cgpPindel always ran in its WGS default; this exposes the choice
 and keeps that default.
 
+## Execution shape
+
+`--scatter_by_contig` (default `true`) runs one task per contig, matching how
+`toil_pindel` scattered cgpPindel across the cluster. Set it `false` to run
+`pindel.pl` once per pair and let cgpPindel thread internally.
+
+Both produce the same output. Pick on scheduling: the scattered path wants many
+single-core slots, the unstaged path wants one large slot and stages nothing
+between stages, so it suits fast nodes with slow shared storage.
+
 ## Resources
 
-`--pindel_cpus` becomes `task.cpus` and is passed to cgpPindel as `-cpus`;
-cgpPindel recommends at most 4 during its input stage. `--pindel_memory` becomes
-`task.memory`. These replace `toil_pindel`'s `--tgd`, which only ever changed the
-Toil resource request and never reached cgpPindel.
+`--pindel_memory` becomes `task.memory` on both paths. `--pindel_cpus` matters
+only on the **unstaged** path, where it becomes `task.cpus` and is passed as
+`-cpus`; the scattered path is one contig per task on one core.
+
+Do not set `--pindel_cpus` low. A contig cannot be split, so the longest contig
+is the critical path in both shapes; chr1 is about 8% of GRCh37, so below roughly
+13 cores the unstaged path becomes core-bound and slower than scattering, and
+above it the extra cores buy nothing. The default is 16.
+
+cgpPindel's *"recommend max 4 during 'input'"* note does not apply here — that
+stage has only two work items and cgpPindel caps it itself.
+
+These replace `toil_pindel`'s `--tgd`, which only ever changed the Toil resource
+request and never reached cgpPindel.
 
 ## Output layout
 

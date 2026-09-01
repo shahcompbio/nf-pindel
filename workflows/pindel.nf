@@ -5,6 +5,7 @@
 */
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { CGPPINDEL              } from '../modules/local/cgppindel/main'
+include { CGPPINDEL_SCATTER      } from '../subworkflows/local/cgppindel_scatter'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -46,10 +47,27 @@ workflow PINDEL {
     def ch_filter_rules = channel.value(file(params.filter_rules, checkIfExists: true))
 
     //
-    // MODULE: cgpPindel, one unstaged run per tumour/normal pair
+    // Two execution shapes for the same tool.
     //
-    CGPPINDEL(
-        ch_samplesheet,
+    // Scattered (default) reproduces what toil_pindel got from driving
+    // cgpPindel's -process/-index staging: one task per contig, one core each,
+    // so it schedules as many small slots.
+    //
+    // Unstaged runs pindel.pl once per pair and lets cgpPindel thread across
+    // -cpus internally. Same output, but it wants a single large slot. Prefer it
+    // when big nodes are easy to get or shared storage is slow, since it stages
+    // nothing between stages.
+    //
+    // Both bottom out at the longest contig, which cannot be split, so neither is
+    // faster than the other once the unstaged path has enough cores.
+    //
+    def ch_scatter = ch_samplesheet.branch { meta, _nb, _ni, _nbas, _tb, _ti, _tbas ->
+        scatter: params.scatter_by_contig
+        single: true
+    }
+
+    CGPPINDEL_SCATTER(
+        ch_scatter.scatter,
         ch_fasta,
         ch_simrep,
         ch_genes,
@@ -57,6 +75,21 @@ workflow PINDEL {
         ch_badloci,
         ch_filter_rules,
     )
+
+    CGPPINDEL(
+        ch_scatter.single,
+        ch_fasta,
+        ch_simrep,
+        ch_genes,
+        ch_unmatched,
+        ch_badloci,
+        ch_filter_rules,
+    )
+
+    def ch_vcf = CGPPINDEL_SCATTER.out.vcf.mix(CGPPINDEL.out.vcf)
+    def ch_mt_bam = CGPPINDEL_SCATTER.out.mt_bam.mix(CGPPINDEL.out.mt_bam)
+    def ch_wt_bam = CGPPINDEL_SCATTER.out.wt_bam.mix(CGPPINDEL.out.wt_bam)
+    def ch_germline_bed = CGPPINDEL_SCATTER.out.germline_bed.mix(CGPPINDEL.out.germline_bed)
 
     //
     // Collate and save software versions
@@ -88,11 +121,11 @@ workflow PINDEL {
         )
 
     emit:
-    vcf          = CGPPINDEL.out.vcf           // channel: [ meta, vcf ]
-    mt_bam       = CGPPINDEL.out.mt_bam        // channel: [ meta, bam ]
-    wt_bam       = CGPPINDEL.out.wt_bam        // channel: [ meta, bam ]
-    germline_bed = CGPPINDEL.out.germline_bed  // channel: [ meta, bed ]
-    versions     = ch_collated_versions        // channel: [ path(versions.yml) ]
+    vcf          = ch_vcf                 // channel: [ meta, vcf ]
+    mt_bam       = ch_mt_bam              // channel: [ meta, bam ]
+    wt_bam       = ch_wt_bam              // channel: [ meta, bam ]
+    germline_bed = ch_germline_bed        // channel: [ meta, bed ]
+    versions     = ch_collated_versions   // channel: [ path(versions.yml) ]
 }
 
 //

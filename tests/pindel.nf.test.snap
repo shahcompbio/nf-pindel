@@ -2,7 +2,13 @@
     "pindel_layout": {
         "content": [
             {
-                "CGPPINDEL": {
+                "CGPPINDEL_CALL": {
+                    "cgpPindel": "3.10.0"
+                },
+                "CGPPINDEL_INPUT": {
+                    "cgpPindel": "3.10.0"
+                },
+                "CGPPINDEL_MERGE_FLAG": {
                     "cgpPindel": "3.10.0"
                 },
                 "Workflow": {
@@ -22,7 +28,7 @@
                 "pipeline_info/pindel_software_versions.yml"
             ]
         ],
-        "timestamp": "2026-08-31T22:11:55.742058",
+        "timestamp": "2026-08-31T22:40:33.80754",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "25.10.4"

@@ -1,21 +1,26 @@
 %%metro title: nf-pindel
 %%metro style: light
-%%metro line: pair | Tumour/normal pair | #2A9D8F
+%%metro line: call | cgpPindel, scattered per contig | #2A9D8F
 %%metro line: refs | Flagging resources | #E9A23B | dashed
 %%metro directional: true
 
 %%metro files: inputs | samplesheet | Input
-%%metro files: resources | simrep genes unmatched rules | Resources
 %%metro files: outputs | flagged.vcf mt.bam wt.bam | Results
 
-%%metro process: cgppindel | .*:CGPPINDEL
+%%metro process: input | .*:CGPPINDEL_INPUT
+%%metro process: call | .*:CGPPINDEL_CALL
+%%metro process: mergeflag | .*:CGPPINDEL_MERGE_FLAG
 
 graph LR
+    resources[Flagging resources]
     inputs[Input]
-    resources[Resources]
-    cgppindel[pindel.pl]
+    input[input]
+    call[pindel + pin2vcf]
+    mergeflag[merge + flag]
     outputs[Results]
 
-    inputs -->|pair| cgppindel
-    resources -->|refs| cgppindel
-    cgppindel -->|pair| outputs
+    resources -->|refs| mergeflag
+    inputs -->|call| input
+    input -->|call| call
+    call -->|call| mergeflag
+    mergeflag -->|call| outputs

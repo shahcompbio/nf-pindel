@@ -31,11 +31,23 @@ is about parallelism rather than output.
 
 ### What runs
 
-One `pindel.pl` invocation per pair. cgpPindel internally performs its own
-`input → pindel → pin2vcf → merge → flag` staging and threads across `-cpus`;
-`toil_pindel` drove those five stages itself as separate Toil jobs. Running it
-unstaged is what cancerit's own Nextflow does, and it is why this pipeline has a
-single process. The trade-off is discussed in
+Two execution shapes for the same tool, selected by `--scatter_by_contig`.
+
+**Scattered (default)** reproduces what `toil_pindel` got from driving
+cgpPindel's `-process`/`-index` staging — one task per contig, one core each:
+
+```
+CGPPINDEL_INPUT  →  CGPPINDEL_CALL (per contig)  →  CGPPINDEL_MERGE_FLAG
+```
+
+**Unstaged** (`--scatter_by_contig false`) runs `pindel.pl` once per pair and
+lets cgpPindel thread internally across `--pindel_cpus`, which is what
+cancerit's own Nextflow does.
+
+The two produce the same output — verified on the test data down to the INFO and
+FORMAT fields — and neither is faster than the other, because a contig cannot be
+split and the longest one is the critical path either way. They differ in
+scheduling shape: many small slots versus one large one. See
 [docs/migration.md](docs/migration.md).
 
 ## Usage
