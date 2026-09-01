@@ -1,0 +1,45 @@
+repository_type: pipeline
+
+nf_core_version: 4.1.0
+
+lint:
+  files_unchanged:
+    - CODE_OF_CONDUCT.md
+    - assets/nf-core-nf-pindel_logo_light.png
+    - docs/images/nf-core-nf-pindel_logo_light.png
+    - docs/images/nf-core-nf-pindel_logo_dark.png
+    - .github/ISSUE_TEMPLATE/bug_report.yml
+    - .github/PULL_REQUEST_TEMPLATE.md
+    - assets/email_template.txt
+    - docs/README.md
+    - assets/sendmail_template.txt
+  nextflow_config:
+    - manifest.name
+    - manifest.homePage
+  multiqc_config: false
+  files_exist:
+    - CODE_OF_CONDUCT.md
+    - assets/nf-core-nf-pindel_logo_light.png
+    - docs/images/nf-core-nf-pindel_logo_light.png
+    - docs/images/nf-core-nf-pindel_logo_dark.png
+    - .github/ISSUE_TEMPLATE/config.yml
+    - .github/workflows/awstest.yml
+    - .github/workflows/awsfulltest.yml
+    - assets/multiqc_config.yml
+    - conf/igenomes.config
+    - conf/igenomes_ignored.config
+
+template:
+  org: shahcompbio
+  name: nf-pindel
+  description: cgpPindel indel calling and flagging for tumour/normal pairs
+  author: shahcompbio
+  version: 1.0.0
+  force: true
+  outdir: /Users/havasove/Desktop/repos/nf-pindel
+  skip_features:
+    - igenomes
+    - multiqc
+    - fastqc
+    - is_nfcore
+  is_nfcore: false
