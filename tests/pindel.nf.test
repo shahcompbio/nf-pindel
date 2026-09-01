@@ -1,0 +1,88 @@
+nextflow_pipeline {
+
+    name "cgpPindel indel calling"
+    script "../main.nf"
+    tag "pipeline"
+
+    // Ported from toil_pindel tests/test_commands.py::test_pindel, which only
+    // asserted that the flagged VCF existed. This asserts the full downstream
+    // contract and the call set.
+    //
+    // The golden records come from cgpPindel 3.10.0 — the same version, in the
+    // same container, that toil_pindel pinned — so they are expected to match
+    // toil's output exactly, not merely to be plausible.
+    test("-profile test — tumour/normal pair") {
+
+        config "../conf/test.config"
+
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+        }
+
+        then {
+            assert workflow.success
+
+            def out = path("$outputDir/TEST")
+            def vcf = path("${out}/tumor_vs_normal.flagged.vcf.gz").linesGzip
+            def records = vcf.findAll { line -> !line.startsWith("#") }
+            def calls = records.collect { line -> line.tokenize('\t')[0, 1, 3, 4] }
+
+            assertAll(
+                // toil_pindel's only assertion
+                { assert path("${out}/tumor_vs_normal.flagged.vcf.gz").exists() },
+
+                // Everything the downstream isabl_apps contract globs for
+                { assert path("${out}/tumor_vs_normal.flagged.vcf.gz.tbi").exists() },
+                { assert path("${out}/tumor_vs_normal_mt.bam").exists() },
+                { assert path("${out}/tumor_vs_normal_mt.bam.bai").exists() },
+                { assert path("${out}/tumor_vs_normal_wt.bam").exists() },
+                { assert path("${out}/tumor_vs_normal_wt.bam.bai").exists() },
+                { assert path("${out}/tumor_vs_normal.germline.bed").exists() },
+
+                // Golden calls. cgpPindel stamps a fresh UUID into the ID column
+                // on every run, so match on CHROM/POS/REF/ALT rather than on the
+                // whole line — the VCF is not byte-reproducible between runs.
+                { assert records.size() == 6 },
+                { assert calls.contains(["2", "529", "G", "GT"]) },
+                { assert calls.contains(["2", "529", "G", "GTT"]) },
+                { assert calls.contains(["2", "123513", "T", "TG"]) },
+                { assert calls.contains(["2", "123601", "TG", "T"]) },
+
+                // Flagging actually ran: the rules file must populate FILTER,
+                // not leave every record at PASS or '.'
+                { assert records.any { line -> line.tokenize('\t')[6] == 'PASS' } },
+                { assert records.any { line -> line.tokenize('\t')[6].startsWith('F0') } },
+
+                { assert snapshot(
+                    removeNextflowVersion("$outputDir/pipeline_info/pindel_software_versions.yml"),
+                    getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+                ).match("pindel_layout") },
+            )
+        }
+    }
+
+    // --flat_publish must reproduce the toil_pindel layout, which wrote straight
+    // into --outdir with no patient level.
+    test("-profile test --flat_publish — legacy toil_pindel layout") {
+
+        config "../conf/test.config"
+
+        when {
+            params {
+                outdir = "$outputDir"
+                flat_publish = true
+            }
+        }
+
+        then {
+            assert workflow.success
+            assertAll(
+                { assert path("$outputDir/tumor_vs_normal.flagged.vcf.gz").exists() },
+                { assert path("$outputDir/tumor_vs_normal_mt.bam").exists() },
+                { assert path("$outputDir/tumor_vs_normal_wt.bam").exists() },
+            )
+        }
+    }
+}

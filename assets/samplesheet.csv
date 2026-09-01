@@ -1,3 +1,5 @@
-sample,fastq_1,fastq_2
-SAMPLE_PAIRED_END,/path/to/fastq/files/AEG588A1_S1_L002_R1_001.fastq.gz,/path/to/fastq/files/AEG588A1_S1_L002_R2_001.fastq.gz
-SAMPLE_SINGLE_END,/path/to/fastq/files/AEG588A4_S4_L003_R1_001.fastq.gz,
+patient,sample,status,bam,bai,bas
+PATIENT_1,PATIENT_1_N,0,/path/to/bams/normal.bam,/path/to/bams/normal.bam.bai,/path/to/bams/normal.bam.bas
+PATIENT_1,PATIENT_1_T,1,/path/to/bams/tumor.bam,/path/to/bams/tumor.bam.bai,/path/to/bams/tumor.bam.bas
+PATIENT_2,PATIENT_2_N,0,/path/to/bams/normal2.bam,/path/to/bams/normal2.bam.bai,
+PATIENT_2,PATIENT_2_T,1,/path/to/bams/tumor2.bam,/path/to/bams/tumor2.bam.bai,

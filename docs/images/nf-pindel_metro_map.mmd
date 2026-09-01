@@ -1,0 +1,21 @@
+%%metro title: nf-pindel
+%%metro style: light
+%%metro line: pair | Tumour/normal pair | #2A9D8F
+%%metro line: refs | Flagging resources | #E9A23B | dashed
+%%metro directional: true
+
+%%metro files: inputs | samplesheet | Input
+%%metro files: resources | simrep genes unmatched rules | Resources
+%%metro files: outputs | flagged.vcf mt.bam wt.bam | Results
+
+%%metro process: cgppindel | .*:CGPPINDEL
+
+graph LR
+    inputs[Input]
+    resources[Resources]
+    cgppindel[pindel.pl]
+    outputs[Results]
+
+    inputs -->|pair| cgppindel
+    resources -->|refs| cgppindel
+    cgppindel -->|pair| outputs

@@ -13,9 +13,9 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { NF-PINDEL  } from './workflows/nf-pindel'
-include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_nf-pindel_pipeline'
-include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_nf-pindel_pipeline'
+include { PINDEL } from './workflows/pindel'
+include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_pindel_pipeline'
+include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_pindel_pipeline'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     NAMED WORKFLOWS FOR PIPELINE
@@ -25,7 +25,7 @@ include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_nf-p
 //
 // WORKFLOW: Run main analysis pipeline depending on type of input
 //
-workflow SHAHCOMPBIO_NF-PINDEL {
+workflow SHAHCOMPBIO_NFPINDEL {
 
     take:
     samplesheet // channel: samplesheet read in from --input
@@ -35,7 +35,7 @@ workflow SHAHCOMPBIO_NF-PINDEL {
     //
     // WORKFLOW: Run pipeline
     //
-    NF-PINDEL (
+    PINDEL (
         samplesheet,
         params.outdir,
     )
@@ -67,7 +67,7 @@ workflow {
     //
     // WORKFLOW: Run main workflow
     //
-    SHAHCOMPBIO_NF-PINDEL (
+    SHAHCOMPBIO_NFPINDEL (
         PIPELINE_INITIALISATION.out.samplesheet
     )
     //

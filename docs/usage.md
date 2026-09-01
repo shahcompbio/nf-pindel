@@ -4,51 +4,87 @@
 
 ## Introduction
 
-<!-- TODO nf-core: Add documentation about anything specific to running your pipeline. For general topics, please point to (and add to) the main nf-core website. -->
+This pipeline calls and flags indels from tumour/normal BAM pairs with cgpPindel
+3.10.0. It is the Nextflow port of `toil_pindel` and runs the same cgpPindel
+version from the same container; see [migration.md](migration.md) for the one
+behavioural change, which is about parallelism rather than output.
 
 ## Samplesheet input
 
-You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row as shown in the examples below.
+Create a comma-separated samplesheet and point `--input` at it:
 
 ```bash
 --input '[path to samplesheet file]'
 ```
 
-### Multiple runs of the same sample
-
-The `sample` identifiers have to be the same when you have re-sequenced the same sample more than once e.g. to increase sequencing depth. The pipeline will concatenate the raw reads before performing any downstream analysis. Below is an example for the same sample sequenced across 3 lanes:
-
-```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L003_R1_001.fastq.gz,AEG588A1_S1_L003_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L004_R1_001.fastq.gz,AEG588A1_S1_L004_R2_001.fastq.gz
-```
-
-### Full samplesheet
-
-The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 3 columns to match those defined in the table below.
-
-A final samplesheet file consisting of both single- and paired-end data may look something like the one below. This is for 6 samples, where `TREATMENT_REP3` has been sequenced twice.
+Rows are grouped by `patient`. Each patient needs exactly one `status=0` normal
+and one `status=1` tumour. One execution can contain any number of pairs.
 
 ```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP2,AEG588A2_S2_L002_R1_001.fastq.gz,AEG588A2_S2_L002_R2_001.fastq.gz
-CONTROL_REP3,AEG588A3_S3_L002_R1_001.fastq.gz,AEG588A3_S3_L002_R2_001.fastq.gz
-TREATMENT_REP1,AEG588A4_S4_L003_R1_001.fastq.gz,
-TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
+patient,sample,status,bam,bai,bas
+PATIENT_1,PATIENT_1_N,0,/data/normal.bam,/data/normal.bam.bai,/data/normal.bam.bas
+PATIENT_1,PATIENT_1_T,1,/data/tumor.bam,/data/tumor.bam.bai,/data/tumor.bam.bas
 ```
 
-| Column    | Description                                                                                                                                                                            |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1` | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+| Column    | Description                                                            |
+| --------- | ---------------------------------------------------------------------- |
+| `patient` | Groups rows into one tumour/normal pair. Required.                      |
+| `sample`  | Sample identifier. Required.                                            |
+| `status`  | `0` for the normal, `1` for the tumour. Exactly one of each per patient. |
+| `bam`     | Full path to the aligned BAM/CRAM. Required.                            |
+| `bai`     | Full path to its index. Required.                                       |
+| `bas`     | Optional BAM statistics file, co-located with the BAM.                  |
 
-An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
+An [example samplesheet](../assets/samplesheet.csv) is provided with the pipeline.
+
+Note that **output file names come from the BAM headers' SM tags**, not from the
+`sample` column, because that is how cgpPindel names them and the downstream
+contract globs for those names.
+
+## Reference
+
+`--fasta` is required and `--fai` defaults to `<fasta>.fai`. cgpPindel reads the
+index directly to enumerate contigs, so it must be co-located with the FASTA.
+
+## Flagging resources
+
+| Parameter        | Description |
+| ---------------- | ----------- |
+| `--simrep`       | Tabix indexed simple/satellite repeats BED. Required. |
+| `--genes`        | Tabix indexed coding gene footprints BED. Required. |
+| `--unmatched`    | Tabix indexed unmatched normal panel, gff3 or bed. Required. |
+| `--filter_rules` | VCF filter rules, as `FlagVcf.pl` expects. Required. |
+| `--badloci`      | Optional BED of loci not to accept as anchors. |
+
+Indexes default to `<file>.tbi` and can be overridden with `--simrep_tbi`,
+`--genes_tbi`, `--unmatched_tbi`, `--badloci_tbi`.
+
+The rules file differs between genomic and targeted assays — supply the right one
+for your data. `toil_pindel` called this parameter `--filter`.
+
+## Calling options
+
+`--species` (HUMAN or MOUSE) and `--assembly` are read from the BAM header when
+not given. `--exclude` skips contigs, comma separated with `%` as the wildcard,
+e.g. `'NC_007605,hs37d5,GL%'`.
+
+`--seqtype` (WGS, WXS, TGD) sets cgpPindel's `-seqtype`. `toil_pindel` never
+passed it, so cgpPindel always ran in its WGS default; this exposes the choice
+and keeps that default.
+
+## Resources
+
+`--pindel_cpus` becomes `task.cpus` and is passed to cgpPindel as `-cpus`;
+cgpPindel recommends at most 4 during its input stage. `--pindel_memory` becomes
+`task.memory`. These replace `toil_pindel`'s `--tgd`, which only ever changed the
+Toil resource request and never reached cgpPindel.
+
+## Output layout
+
+By default each patient publishes into `<outdir>/<patient>/`. Pass
+`--flat_publish` to drop that level and reproduce the `toil_pindel` layout — only
+for single-pair runs, since every patient would otherwise write to the same
+paths.
 
 ## Running the pipeline
 

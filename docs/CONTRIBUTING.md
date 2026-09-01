@@ -159,4 +159,25 @@ If you update images or graphics, follow the nf-core [style guidelines](https://
 
 ## Pipeline specific contribution guidelines
 
-<!-- TODO nf-core: Add any pipeline specific contribution guidelines here, such as coding styles, procedures, checklists etc. -->
+When changing how cgpPindel is invoked, keep [migration.md](migration.md) in
+sync — it records what this pipeline preserves from `toil_pindel` and where it
+deliberately differs, in particular the staged-to-unstaged execution change.
+
+Two things to know before writing tests:
+
+- cgpPindel stamps a fresh UUID into the ID column of every VCF record on every
+  run, so the VCF is not byte-reproducible. Assert on CHROM/POS/REF/ALT/FILTER,
+  never on whole lines or file checksums.
+- Output names come from the BAM headers' SM tags, not the samplesheet. Do not
+  rename them: the downstream `isabl_apps` contract globs for those names.
+
+The README metro map is generated with [nf-metro](https://seqeralabs.github.io/nf-metro/latest/)
+from `docs/images/nf-pindel_metro_map.mmd`:
+
+```bash
+pip install nf-metro
+nf-metro render docs/images/nf-pindel_metro_map.mmd -o docs/images/nf-pindel_metro_map.svg
+```
+
+The plan this pipeline was built from and a record of how the port was verified
+live in [`.claude/`](../.claude/).

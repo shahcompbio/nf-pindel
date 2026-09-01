@@ -1,0 +1,4 @@
+bam_filename	sample	platform	platform_unit	library	readgroup	read_length_r1	read_length_r2	#_mapped_bases	#_mapped_bases_r1	#_mapped_bases_r2	#_divergent_bases	#_divergent_bases_r1	#_divergent_bases_r2	#_total_reads	#_total_reads_r1	#_total_reads_r2	#_mapped_reads	#_mapped_reads_r1	#_mapped_reads_r2	#_mapped_reads_properly_paired	#_gc_bases_r1	#_gc_bases_r2	mean_insert_size	insert_size_sd	median_insert_size	#_duplicate_reads
+normal.bam	normal	.	.	.	1	100	100	249973	125597	124376	2867	1269	1598	2514	1257	1257	2510	1257	1253	1249	44790	45061	217.516	79.745	204.000	766
+normal.bam	normal	.	.	.	2	100	100	253507	126995	126512	2654	1174	1480	2542	1271	1271	2541	1271	1270	1267	45514	45307	229.709	89.066	214.000	742
+normal.bam	normal	.	.	.	3	100	100	258349	129493	128856	2850	1221	1629	2592	1296	1296	2592	1296	1296	1293	46754	46486	231.131	87.899	219.000	780

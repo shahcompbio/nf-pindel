@@ -10,6 +10,14 @@
 
 ## Pipeline tools
 
+- [cgpPindel](https://github.com/cancerit/cgpPindel)
+
+  > Raine KM, Van Loo P, Wedge DC, Jones D, Menzies A, Butler AP, Teague JW, Tarpey P, Nik-Zainal S, Campbell PJ. cgpPindel: Identifying Somatically Acquired Insertion and Deletion Events from Paired End Sequencing. Curr Protoc Bioinformatics. 2015 Dec 17;52:15.7.1-15.7.12. doi: 10.1002/0471250953.bi1507s52. PubMed PMID: 26678382.
+
+- [Pindel](https://pubmed.ncbi.nlm.nih.gov/19561018/)
+
+  > Ye K, Schulz MH, Long Q, Apweiler R, Ning Z. Pindel: a pattern growth approach to detect break points of large deletions and medium sized insertions from paired-end short reads. Bioinformatics. 2009 Nov 1;25(21):2865-71. doi: 10.1093/bioinformatics/btp394. PubMed PMID: 19561018.
+
 ## Software packaging/containerisation tools
 
 - [Anaconda](https://anaconda.com)

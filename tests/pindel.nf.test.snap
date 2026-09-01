@@ -1,0 +1,31 @@
+{
+    "pindel_layout": {
+        "content": [
+            {
+                "CGPPINDEL": {
+                    "cgpPindel": "3.10.0"
+                },
+                "Workflow": {
+                    "shahcompbio/nf-pindel": "v1.0.0"
+                }
+            },
+            [
+                "TEST",
+                "TEST/tumor_vs_normal.flagged.vcf.gz",
+                "TEST/tumor_vs_normal.flagged.vcf.gz.tbi",
+                "TEST/tumor_vs_normal.germline.bed",
+                "TEST/tumor_vs_normal_mt.bam",
+                "TEST/tumor_vs_normal_mt.bam.bai",
+                "TEST/tumor_vs_normal_wt.bam",
+                "TEST/tumor_vs_normal_wt.bam.bai",
+                "pipeline_info",
+                "pipeline_info/pindel_software_versions.yml"
+            ]
+        ],
+        "timestamp": "2026-08-31T22:11:55.742058",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    }
+}

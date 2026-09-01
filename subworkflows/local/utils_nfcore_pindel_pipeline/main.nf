@@ -86,25 +86,16 @@ workflow PIPELINE_INITIALISATION {
     // Create channel from input file provided through params.input
     //
 
-    channel
+    // Rows are grouped by patient: the status=1 (tumour) row is called against
+    // the status=0 (normal) row, reproducing toil_pindel's --tumor_bam/--normal_bam
+    // invocation from a single input format and letting several pairs run at once.
+    def ch_samplesheet = channel
         .fromList(samplesheetToList(input, "${projectDir}/assets/schema_input.json"))
-        .map {
-            meta, fastq_1, fastq_2 ->
-                if (!fastq_2) {
-                    return [ meta.id, meta + [ single_end:true ], [ fastq_1 ] ]
-                } else {
-                    return [ meta.id, meta + [ single_end:false ], [ fastq_1, fastq_2 ] ]
-                }
+        .map { meta, bam, bai, bas ->
+            [meta.patient, [meta, bam, bai, bas ?: []]]
         }
         .groupTuple()
-        .map { samplesheet ->
-            validateInputSamplesheet(samplesheet)
-        }
-        .map {
-            meta, fastqs ->
-                return [ meta, fastqs.flatten() ]
-        }
-        .set { ch_samplesheet }
+        .map { patient, rows -> validateInputSamplesheet(patient, rows) }
 
     emit:
     samplesheet = ch_samplesheet
@@ -161,77 +152,31 @@ workflow PIPELINE_COMPLETION {
 */
 
 //
-// Validate channels from input samplesheet
+// Collapse the rows belonging to one patient into a single tumour/normal pair.
 //
-def validateInputSamplesheet(input) {
-    def (metas, fastqs) = input[1..2]
+// Returns [ meta, normal_bam, normal_bai, normal_bas, tumor_bam, tumor_bai, tumor_bas ].
+// cgpPindel always needs both, so a patient missing either is an error.
+//
+def validateInputSamplesheet(patient, rows) {
+    def normals = rows.findAll { row -> row[0].status == 0 }
+    def tumors = rows.findAll { row -> row[0].status == 1 }
 
-    // Check that multiple runs of the same sample are of the same datatype i.e. single-end / paired-end
-    def endedness_ok = metas.collect{ meta -> meta.single_end }.unique().size == 1
-    if (!endedness_ok) {
-        error("Please check input samplesheet -> Multiple runs of a sample must be of the same datatype i.e. single-end or paired-end: ${metas[0].id}")
+    if (normals.size() != 1) {
+        error("Please check input samplesheet -> patient '${patient}' has ${normals.size()} normal (status=0) samples, expected exactly 1.")
+    }
+    if (tumors.size() != 1) {
+        error("Please check input samplesheet -> patient '${patient}' has ${tumors.size()} tumour (status=1) samples, expected exactly 1. cgpPindel needs a pair; split multiple tumours across separate patients.")
     }
 
-    return [ metas[0], fastqs ]
-}
-//
-// Generate methods description for MultiQC
-//
-def toolCitationText() {
-    // TODO nf-core: Optionally add in-text citation tools to this list.
-    // Can use ternary operators to dynamically construct based conditions, e.g. params["run_xyz"] ? "Tool (Foo et al. 2023)" : "",
-    // Uncomment function in methodsDescriptionText to render in MultiQC report
-    def citation_text = [
-            "Tools used in the workflow included:",
-            "."
-        ].join(' ').trim()
+    def (normal_meta, normal_bam, normal_bai, normal_bas) = normals[0]
+    def (tumor_meta, tumor_bam, tumor_bai, tumor_bas) = tumors[0]
 
-    return citation_text
-}
+    def meta = [
+        id: patient,
+        patient: patient,
+        normal_id: normal_meta.id,
+        tumor_id: tumor_meta.id,
+    ]
 
-def toolBibliographyText() {
-    // TODO nf-core: Optionally add bibliographic entries to this list.
-    // Can use ternary operators to dynamically construct based conditions, e.g. params["run_xyz"] ? "<li>Author (2023) Pub name, Journal, DOI</li>" : "",
-    // Uncomment function in methodsDescriptionText to render in MultiQC report
-    def reference_text = [
-        ].join(' ').trim()
-
-    return reference_text
-}
-
-def methodsDescriptionText(mqc_methods_yaml) {
-    // Convert  to a named map so can be used as with familiar NXF ${workflow} variable syntax in the MultiQC YML file
-    def meta = [:]
-    meta.workflow = workflow.toMap()
-    meta["manifest_map"] = workflow.manifest.toMap()
-
-    // Pipeline DOI
-    if (meta.manifest_map.doi) {
-        // Using a loop to handle multiple DOIs
-        // Removing `https://doi.org/` to handle pipelines using DOIs vs DOI resolvers
-        // Removing ` ` since the manifest.doi is a string and not a proper list
-        def temp_doi_ref = ""
-        def manifest_doi = meta.manifest_map.doi.tokenize(",")
-        manifest_doi.each { doi_ref ->
-            temp_doi_ref += "(doi: <a href=\'https://doi.org/${doi_ref.replace("https://doi.org/", "").replace(" ", "")}\'>${doi_ref.replace("https://doi.org/", "").replace(" ", "")}</a>), "
-        }
-        meta["doi_text"] = temp_doi_ref.substring(0, temp_doi_ref.length() - 2)
-    } else meta["doi_text"] = ""
-    meta["nodoi_text"] = meta.manifest_map.doi ? "" : "<li>If available, make sure to update the text to include the Zenodo DOI of version of the pipeline used. </li>"
-
-    // Tool references
-    meta["tool_citations"] = ""
-    meta["tool_bibliography"] = ""
-
-    // TODO nf-core: Only uncomment below if logic in toolCitationText/toolBibliographyText has been filled!
-    // meta["tool_citations"] = toolCitationText().replaceAll(", \\.", ".").replaceAll("\\. \\.", ".").replaceAll(", \\.", ".")
-    // meta["tool_bibliography"] = toolBibliographyText()
-
-
-    def methods_text = mqc_methods_yaml.text
-
-    def engine =  new groovy.text.SimpleTemplateEngine()
-    def description_html = engine.createTemplate(methods_text).make(meta)
-
-    return description_html.toString()
+    return [meta, normal_bam, normal_bai, normal_bas, tumor_bam, tumor_bai, tumor_bas]
 }

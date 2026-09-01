@@ -3,14 +3,29 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v1.0.0 - [unreleased<!-- TODO nf-core: replace with date on release -->]
+## v1.0.0 - [2026-09-01]
 
-Initial release of shahcompbio/nf-pindel, created with the [nf-core](https://nf-co.re/) template.
+Initial release of shahcompbio/nf-pindel, the Nextflow port of the
+`toil_pindel` Toil pipeline, v1.1.8.
 
-### `Added`
+### Added
 
-### `Fixed`
+- Indel calling and flagging with cgpPindel 3.10.0, from the same
+  `quay.io/wtsicgp/cgppindel:3.10.0` image `toil_pindel` used.
+- nf-core samplesheet input, grouped by patient, so several pairs run at once.
+- `--flat_publish` to reproduce the `toil_pindel` output layout.
+- `--seqtype`, exposing a cgpPindel option `toil_pindel` never passed. Defaults
+  to `WGS`, which is what cgpPindel used regardless.
+- nf-test suite covering the downstream result contract, the call set, and that
+  flagging genuinely populates the FILTER column.
 
-### `Dependencies`
+### Changed from toil_pindel
 
-### `Deprecated`
+- **cgpPindel runs unstaged, once per pair**, rather than as five Toil stages
+  driven through `-process`/`-index`. Same tool and version, so the same output;
+  parallelism becomes per-node rather than per-contig.
+- `--filter` is renamed `--filter_rules`.
+- `--tgd` is replaced by explicit `--pindel_cpus` / `--pindel_memory`; it only
+  ever changed Toil resource requests and never reached cgpPindel.
+
+See [docs/migration.md](docs/migration.md) for the full mapping.

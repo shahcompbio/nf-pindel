@@ -7,27 +7,46 @@
     "items": {
         "type": "object",
         "properties": {
+            "patient": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Patient identifier must be provided and cannot contain spaces",
+                "meta": ["patient"]
+            },
             "sample": {
                 "type": "string",
                 "pattern": "^\\S+$",
                 "errorMessage": "Sample name must be provided and cannot contain spaces",
                 "meta": ["id"]
             },
-            "fastq_1": {
-                "type": "string",
-                "format": "file-path",
-                "exists": true,
-                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+            "status": {
+                "type": "integer",
+                "enum": [0, 1],
+                "errorMessage": "Status must be 0 for a normal sample or 1 for a tumour sample",
+                "meta": ["status"]
             },
-            "fastq_2": {
+            "bam": {
                 "type": "string",
                 "format": "file-path",
                 "exists": true,
-                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 2 cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "pattern": "^\\S+\\.(bam|cram)$",
+                "errorMessage": "BAM/CRAM file must be provided, cannot contain spaces and must have extension '.bam' or '.cram'"
+            },
+            "bai": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^\\S+\\.(bai|crai)$",
+                "errorMessage": "BAM/CRAM index must be provided, cannot contain spaces and must have extension '.bai' or '.crai'"
+            },
+            "bas": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^\\S+\\.bas$",
+                "errorMessage": "Optional BAM statistics file, co-located with the BAM, with extension '.bas'"
             }
         },
-        "required": ["sample", "fastq_1"]
+        "required": ["patient", "sample", "status", "bam", "bai"]
     }
 }

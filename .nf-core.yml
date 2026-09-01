@@ -4,6 +4,9 @@ nf_core_version: 4.1.0
 
 lint:
   files_unchanged:
+    - .gitignore
+    - .github/ISSUE_TEMPLATE/config.yml
+    - assets/email_template.html
     - CODE_OF_CONDUCT.md
     - assets/nf-core-nf-pindel_logo_light.png
     - docs/images/nf-core-nf-pindel_logo_light.png
@@ -18,6 +21,7 @@ lint:
     - manifest.homePage
   multiqc_config: false
   files_exist:
+    - tests/default.nf.test
     - CODE_OF_CONDUCT.md
     - assets/nf-core-nf-pindel_logo_light.png
     - docs/images/nf-core-nf-pindel_logo_light.png
