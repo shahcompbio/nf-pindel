@@ -46,6 +46,10 @@ process CGPPINDEL_INPUT {
 
     for dir in out/tmpPindel/*/; do
         sample=\$(basename "\${dir}")
+        if [[ "\${sample}" == *.* ]]; then
+            echo "ERROR: BAM SM tag '\${sample}' contains '.', which breaks the contig scatter. Rename the sample." >&2
+            exit 1
+        fi
         for f in "\${dir}"*.txt.gz; do
             [ -e "\${f}" ] || continue
             mv "\${f}" "reads/\${sample}.\$(basename \${f})"

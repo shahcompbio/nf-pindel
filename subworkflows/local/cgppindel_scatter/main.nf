@@ -24,9 +24,7 @@ workflow CGPPINDEL_SCATTER {
 
     main:
 
-    // ch_pairs is a queue and is needed by all three stages, so fork it once
-    // rather than reading it repeatedly — a second read would split its items
-    // between consumers instead of duplicating them.
+    // ch_pairs is needed by all three stages — fork explicitly for clarity.
     def ch_pair_fork = ch_pairs.multiMap { meta, nbam, nbai, nbas, tbam, tbai, tbas ->
         input: [meta, nbam, nbai, nbas, tbam, tbai, tbas]
         bams: [meta, nbam, nbai, nbas, tbam, tbai, tbas]
@@ -42,25 +40,28 @@ workflow CGPPINDEL_SCATTER {
     }
 
     //
-    // One task per contig: group the per-contig read files by sequence name.
-    // Each group holds exactly the tumour and normal file for that contig.
+    // One task per contig. The flatMap groups each pair's read files by sequence
+    // name and filters excluded contigs. n_contigs rides along in meta so the
+    // downstream gather can use groupKey instead of an unbounded groupTuple.
+    //
+    // Excluded contigs are dropped here rather than downstream: a task that
+    // staged an excluded contig would find zero valid sequences and die in
+    // PCAP::Threaded with "Iterations must be a positive integer: 0".
     //
     def ch_by_contig = CGPPINDEL_INPUT.out.reads
-        .transpose()
-        .map { meta, read ->
+        .flatMap { meta, reads ->
             // <sample>.<seq>.txt.gz — split on the first dot, which a sanitised
             // sample name can never contain.
-            def seq = read.name.substring(read.name.indexOf('.') + 1) - '.txt.gz'
-            [meta + [id: "${meta.patient}_${seq}", seq: seq], read]
+            def by_seq = reads
+                .groupBy { r -> r.name.substring(r.name.indexOf('.') + 1) - '.txt.gz' }
+                .findAll { seq, _files -> !isExcluded(seq) }
+            by_seq.collect { seq, files ->
+                [meta + [id: "${meta.patient}_${seq}", seq: seq, n_contigs: by_seq.size()],
+                 files.sort { it.name }]
+            }
         }
-        // The input stage emits every contig in the BAM, including ones
-        // --exclude names. On the unstaged path cgpPindel drops them itself in
-        // determine_jobs; here the filter has to happen before the scatter, or a
-        // task would stage an excluded contig, find zero valid sequences and die
-        // in PCAP::Threaded with "Iterations must be a positive integer: 0".
-        .filter { meta, _read -> !isExcluded(meta.seq) }
-        .groupTuple()
         .map { meta, reads -> [meta.patient, meta, reads] }
+        // combine, not join — each patient has many contigs; join is 1:1 and would drop all but the first.
         .combine(ch_bams, by: 0)
         .map { _p, meta, reads, nbam, nbai, nbas, tbam, tbai, tbas ->
             [meta, reads, nbam, nbai, nbas, tbam, tbai, tbas]
@@ -72,9 +73,16 @@ workflow CGPPINDEL_SCATTER {
     // Gather every contig's VCF parts back per pair.
     //
     def ch_gathered = CGPPINDEL_CALL.out.vcf_parts
-        .map { meta, parts -> [meta.subMap(['id', 'patient', 'normal_id', 'tumor_id']) + [id: meta.patient], parts] }
-        .groupTuple()
+        .map { meta, parts ->
+            def key = groupKey(
+                meta.subMap(['patient', 'normal_id', 'tumor_id']) + [id: meta.patient],
+                meta.n_contigs
+            )
+            [key, parts]
+        }
+        .groupTuple(sort: true)
         .map { meta, parts -> [meta.patient, meta, parts.flatten()] }
+        // combine, not join — each patient has many contigs; join is 1:1 and would drop all but the first.
         .combine(ch_bams, by: 0)
         .map { _p, meta, parts, nbam, nbai, nbas, tbam, tbai, tbas ->
             [meta, parts, nbam, nbai, nbas, tbam, tbai, tbas]

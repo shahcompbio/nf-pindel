@@ -21,8 +21,6 @@ workflow PINDEL {
 
     main:
 
-    def ch_versions = channel.empty()
-
     //
     // Reference. cgpPindel reads the .fai directly to work out which contigs to
     // process, so it must be co-located with the FASTA.
@@ -111,7 +109,7 @@ workflow PINDEL {
             "${process}:\n${tool_versions.join('\n')}"
         }
 
-    def ch_collated_versions = softwareVersionsToYAML(ch_versions.mix(topic_versions.versions_file))
+    def ch_collated_versions = softwareVersionsToYAML(topic_versions.versions_file)
         .mix(topic_versions_string)
         .collectFile(
             storeDir: "${outdir}/pipeline_info",

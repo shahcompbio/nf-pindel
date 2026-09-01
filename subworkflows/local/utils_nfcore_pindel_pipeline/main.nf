@@ -94,7 +94,7 @@ workflow PIPELINE_INITIALISATION {
         .map { meta, bam, bai, bas ->
             [meta.patient, [meta, bam, bai, bas ?: []]]
         }
-        .groupTuple()
+        .groupTuple(size: 2)
         .map { patient, rows -> validateInputSamplesheet(patient, rows) }
 
     emit:
