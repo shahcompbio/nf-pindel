@@ -1,0 +1,14 @@
+# Recorded output of a real toil_pindel run on the bundled test pair.
+#
+# Produced by toil_pindel driving its five cgpPindel stages over a shared outdir:
+#   input.1, input.2, pindel.1, pindel_to_vcf.1, merge_and_bam.0, flag.0
+#
+# Kept because it is the strongest available evidence of equivalence: it is the
+# actual predecessor pipeline, not a reconstruction of it.
+
+cgppindel_version=3.10.0
+producer=toil_pindel
+nf_container=quay.io/wtsicgp/cgppindel:3.10.0
+nf_profiles=
+reproducible=yes
+notes=The pinned image still pulls on current Docker, so this set can be regenerated with --reference toil on a native linux/amd64 host.

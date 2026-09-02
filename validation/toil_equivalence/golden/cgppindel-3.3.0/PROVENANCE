@@ -1,0 +1,27 @@
+# Recorded output of cgpPindel 3.3.0 on the bundled test pair.
+#
+# 3.3.0 is the version the production PINDEL app runs, so this is the set to
+# validate against when changing anything that ships to production.
+#
+# Produced by a single unstaged pindel.pl invocation, which yields the same
+# results as toil_pindel driving the stages separately; the toil-3.10.0 set in
+# this directory is a real toil run and is what establishes that.
+#
+# Checked in rather than regenerated on demand because the version cannot be
+# obtained from its original image any more: quay.io/wtsicgp/cgppindel:3.3.0 is
+# published with a Docker v1 manifest, which containerd 2.1+ refuses to pull
+#   "media type application/vnd.docker.distribution.manifest.v1+prettyjws
+#    is no longer supported"
+# The repackaged image below is the only way left to run 3.3.0 under Docker.
+
+# 3.3.0 predates the -noflag option, so it cannot run the scattered path, whose
+# input stage relies on it. The pindel_330 profile below selects the unstaged
+# path, which is what production runs for exactly this reason.
+
+cgppindel_version=3.3.0
+producer=cgpPindel
+nf_container=quay.io/shahlab_singularity/docker-pindel:latest
+nf_container_digest=sha256:ff80a7fe530771b7d4e253b32daa7642a3e406b0d7c6276bd33892c0c4b40d2d
+nf_profiles=pindel_330
+reproducible=no
+notes=Regenerating requires a 3.3.0 image; the original quay tag is unpullable on modern Docker.

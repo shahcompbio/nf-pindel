@@ -11,3 +11,8 @@ null/
 .lineage/
 .nf-test/
 .nf-test.log
+__pycache__/
+
+# validate_against_toil.sh scratch (holds a toil_pindel clone) and results
+validation/.work/
+validation/output/
