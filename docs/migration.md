@@ -1,9 +1,30 @@
 # Migrating from toil_pindel
 
 `shahcompbio/nf-pindel` is the Nextflow port of the `toil_pindel` Toil pipeline,
-v1.1.8. Both drive **cgpPindel 3.10.0** from the same
-`quay.io/wtsicgp/cgppindel:3.10.0` image, so unlike the mutect port there is no
-tool-version delta — results are expected to match.
+v1.1.8. Both drive cgpPindel, so unlike the mutect port the tool itself is
+unchanged and results are expected to match — but only when both sides run the
+same cgpPindel release.
+
+## Which cgpPindel version
+
+There are two versions in play, and the difference is not cosmetic.
+
+| | cgpPindel | Image |
+| --- | --- | --- |
+| `toil_pindel` as published | 3.10.0 | `quay.io/wtsicgp/cgppindel:3.10.0` |
+| Production PINDEL app | 3.3.0 | `quay.io/shahlab_singularity/docker-pindel:latest` |
+
+`toil_pindel`'s `Dockerfile` pins 3.10.0, but `toil_container` accepts an image
+at runtime, and production supplied a 3.3.0 one. The two releases flag borderline
+calls differently: on the bundled test pair, `2:529 G>GTTT` is `PASS` under 3.3.0
+and `F005` under 3.10.0. Every other call, the `_mt`/`_wt` read counts and the
+germline BED are identical. Comparing outputs across versions therefore looks
+like a porting defect when it is not — always pin both sides to the same release.
+
+The original 3.3.0 image can no longer be pulled: `quay.io/wtsicgp/cgppindel:3.3.0`
+is published with a Docker v1 manifest, which containerd 2.1+ rejects. The
+repackaged image above is the way to run 3.3.0 today. See
+[porting-guide.md](porting-guide.md) and `validate_against_toil.sh`.
 
 ## Why there is no nf-core module here
 
@@ -43,6 +64,11 @@ CGPPINDEL_MERGE_FLAG   one task per pair   -process merge then flag
 
 Each `CALL` task is one contig on one core — the same scheduling shape toil
 asked for, so it fits the same many-small-slots clusters.
+
+**This path requires cgpPindel 3.8.0 or later.** `CGPPINDEL_INPUT` passes
+`-noflag`, which earlier releases do not have; 3.7.0 and below exit with
+`Unknown option: noflag`. Production runs 3.3.0 and therefore must use the
+unstaged path, which is what `conf/pindel_330.config` selects.
 
 **The trick is to stage exactly one contig per task and always pass `-index 1`.**
 cgpPindel's `input` stage writes `tmpPindel/<sample>/<seq>.txt.gz`, one file per
@@ -87,6 +113,10 @@ test reference has a single contig, so the fan-out and fan-in are structurally
 exercised but not stressed — repeat the comparison on a multi-contig reference
 before trusting the scattered path for production WGS.
 
+`validate_against_toil.sh` checks the port against recorded reference output: a
+real `toil_pindel` run at 3.10.0, and a cgpPindel 3.3.0 run matching production.
+Both compare equal, each against a Nextflow run pinned to its own version.
+
 ## Parameter mapping
 
 | toil_pindel | nf-pindel | Notes |
@@ -106,7 +136,7 @@ before trusting the scattered path for production WGS.
 | `--short_job` | `task.time` in `conf/base.config` | |
 | Toil `jobStore`, `--restart`, `--batchSystem` | `-resume`, `-profile` | Native Nextflow |
 | — | `--seqtype` | New; see below |
-| — | `--scatter_by_contig` | Choose the execution shape; default `true` |
+| — | `--scatter_by_contig` | Choose the execution shape; default `true`, needs cgpPindel ≥ 3.8.0 |
 | — | `--flat_publish` | Drop the `<patient>/` publish level |
 
 ### `--tgd` was only a resource switch

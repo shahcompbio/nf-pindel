@@ -14,9 +14,9 @@
 #    is no longer supported"
 # The repackaged image below is the only way left to run 3.3.0 under Docker.
 
-# 3.3.0 predates the -noflag option, so it cannot run the scattered path, whose
-# input stage relies on it. The pindel_330 profile below selects the unstaged
-# path, which is what production runs for exactly this reason.
+# -noflag arrived in cgpPindel 3.8.0, so 3.3.0 cannot run the scattered path,
+# whose input stage relies on it. The pindel_330 profile below selects the
+# unstaged path, which is what production runs for exactly this reason.
 
 cgppindel_version=3.3.0
 producer=cgpPindel
