@@ -1,5 +1,0 @@
-patient,sample,status,bam,bai,bas
-PATIENT_1,PATIENT_1_N,0,/path/to/bams/normal.bam,/path/to/bams/normal.bam.bai,/path/to/bams/normal.bam.bas
-PATIENT_1,PATIENT_1_T,1,/path/to/bams/tumor.bam,/path/to/bams/tumor.bam.bai,/path/to/bams/tumor.bam.bas
-PATIENT_2,PATIENT_2_N,0,/path/to/bams/normal2.bam,/path/to/bams/normal2.bam.bai,
-PATIENT_2,PATIENT_2_T,1,/path/to/bams/tumor2.bam,/path/to/bams/tumor2.bam.bai,
