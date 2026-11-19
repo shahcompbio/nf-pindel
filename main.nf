@@ -1,89 +1,102 @@
-#!/usr/bin/env nextflow
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    shahcompbio/nf-pindel
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Github : https://github.com/shahcompbio/nf-pindel
-----------------------------------------------------------------------------------------
-*/
+// One-process port of toil_pindel v1.2.0. Toil ran `pindel.pl -process <stage>`
+// as separate cluster jobs over a shared tmpPindel folder. Here one task runs
+// every stage of pindel.pl, flag included, so <T>_vs_<N>.germline.bed is
+// always written. Parameters mirror the pindel.pl flags one to one.
 
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    IMPORT FUNCTIONS / MODULES / SUBWORKFLOWS / WORKFLOWS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
+params.outdir = null
+params.tumour = null
+params.normal = null
+params.genomefa = null
+params.species = null
+params.assembly = null
+params.exclude = ''
+params.genes = null
+params.simrep = null
+params.unmatched = null
+params.filter = null
+params.badloci = null
+params.seqtype = 'WGS'
 
-include { PINDEL } from './workflows/pindel'
-include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_pindel_pipeline'
-include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_pindel_pipeline'
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    NAMED WORKFLOWS FOR PIPELINE
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
+process PINDEL {
+    container 'quay.io/wtsicgp/cgppindel:3.11.1'
+    publishDir params.outdir, mode: 'copy'
 
-//
-// WORKFLOW: Run main analysis pipeline depending on type of input
-//
-workflow SHAHCOMPBIO_NFPINDEL {
+    input:
+    path tumour
+    path normal
+    path genomefa
+    path genes
+    path simrep
+    path unmatched
+    path filter
+    path badloci
+    path sidecars
+    val species
+    val assembly
+    val exclude
+    val seqtype
 
-    take:
-    samplesheet // channel: samplesheet read in from --input
+    output:
+    path '*.flagged.vcf.gz', emit: vcf
+    path '*.flagged.vcf.gz.tbi', emit: tbi
+    path '*_mt.bam', emit: mt_bam
+    path '*_mt.bam.bai', emit: mt_bai
+    path '*_wt.bam', emit: wt_bam
+    path '*_wt.bam.bai', emit: wt_bai
+    path '*.germline.bed', emit: germline_bed
 
-    main:
+    script:
+    def exclude_arg = exclude ? "-exclude '${exclude}'" : ''
+    def badloci_arg = badloci ? "-badloci ${badloci}" : ''
+    """
+    pindel.pl \\
+        -outdir . \\
+        -tumour ${tumour} \\
+        -normal ${normal} \\
+        -reference ${genomefa} \\
+        -species ${species} \\
+        -assembly ${assembly} \\
+        ${exclude_arg} \\
+        -genes ${genes} \\
+        -simrep ${simrep} \\
+        -unmatched ${unmatched} \\
+        ${badloci_arg} \\
+        -filter ${filter} \\
+        -seqtype ${seqtype} \\
+        -cpus ${task.cpus}
+    """
 
-    //
-    // WORKFLOW: Run pipeline
-    //
-    PINDEL (
-        samplesheet,
-        params.outdir,
-    )
+    stub:
+    """
+    touch T_vs_N.flagged.vcf.gz T_vs_N.flagged.vcf.gz.tbi T_vs_N.germline.bed
+    touch T_vs_N_mt.bam T_vs_N_mt.bam.bai T_vs_N_wt.bam T_vs_N_wt.bam.bai
+    """
 }
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    RUN MAIN WORKFLOW
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
 
 workflow {
-
     main:
-    //
-    // SUBWORKFLOW: Run initialisation tasks
-    //
-    PIPELINE_INITIALISATION (
-        params.version,
-        params.validate_params,
-        params.monochrome_logs,
-        args,
-        params.outdir,
-        params.input,
-        params.help,
-        params.help_full,
-        params.show_hidden
-    )
+    def bams = [params.tumour, params.normal].collect { b -> file(b, checkIfExists: true) }
+    def tabixed = [params.genes, params.simrep, params.unmatched, params.badloci].findAll { f -> f }
+    // A .bas beside the BAM gives cgpPindel each read group's insert size.
+    // Toil read it in place, so stage it whenever it exists.
+    def sidecars = bams.collect { b -> file("${b}.bai", checkIfExists: true) } +
+        bams.collect { b -> file("${b}.bas") }.findAll { f -> f.exists() } +
+        tabixed.collect { f -> file("${f}.tbi", checkIfExists: true) } +
+        [file("${params.genomefa}.fai", checkIfExists: true)]
 
-    //
-    // WORKFLOW: Run main workflow
-    //
-    SHAHCOMPBIO_NFPINDEL (
-        PIPELINE_INITIALISATION.out.samplesheet
-    )
-    //
-    // SUBWORKFLOW: Run completion tasks
-    //
-    PIPELINE_COMPLETION (
-        params.email,
-        params.email_on_fail,
-        params.plaintext_email,
-        params.outdir,
-        params.monochrome_logs,
+    PINDEL(
+        bams[0],
+        bams[1],
+        file(params.genomefa, checkIfExists: true),
+        file(params.genes, checkIfExists: true),
+        file(params.simrep, checkIfExists: true),
+        file(params.unmatched, checkIfExists: true),
+        file(params.filter, checkIfExists: true),
+        params.badloci ? file(params.badloci, checkIfExists: true) : [],
+        sidecars,
+        params.species,
+        params.assembly,
+        params.exclude,
+        params.seqtype,
     )
 }
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    THE END
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
