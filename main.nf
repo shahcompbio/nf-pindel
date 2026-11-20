@@ -13,7 +13,12 @@ params.exclude = ''
 params.genes = null
 params.simrep = null
 params.unmatched = null
+// pindel.pl -filter: the genomic or the targeted rule set. A caller picks one
+// with `targeted` and keeps both paths in its site config; `filter` overrides both.
 params.filter = null
+params.filter_genomic = null
+params.filter_targeted = null
+params.targeted = false
 params.badloci = null
 params.seqtype = 'WGS'
 
@@ -91,7 +96,7 @@ workflow {
         file(params.genes, checkIfExists: true),
         file(params.simrep, checkIfExists: true),
         file(params.unmatched, checkIfExists: true),
-        file(params.filter, checkIfExists: true),
+        file(params.filter ?: (params.targeted ? params.filter_targeted : params.filter_genomic), checkIfExists: true),
         params.badloci ? file(params.badloci, checkIfExists: true) : [],
         sidecars,
         params.species,
