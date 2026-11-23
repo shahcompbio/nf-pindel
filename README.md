@@ -1,9 +1,11 @@
 # nf-pindel
 
 cgpPindel tumour-normal indel calling as one Nextflow task. One process runs the
-full `pindel.pl` in `quay.io/wtsicgp/cgppindel:3.11.1`: input generation, pindel per
-contig, VCF conversion, merge and flagging. Flagging writes `<T>_vs_<N>.germline.bed`,
-which the Isabl Caveman app reads.
+full `pindel.pl`: input generation, pindel per contig, VCF conversion, merge and
+flagging. Flagging writes `<T>_vs_<N>.germline.bed`, which the Isabl Caveman app reads.
+
+The image is `ghcr.io/shahcompbio/cgppindel:3.11.1`, an unchanged copy of Sanger's
+`quay.io/wtsicgp/cgppindel:3.11.1` with the same manifest digest.
 
 The parameters mirror the `pindel.pl` flags one to one. Index files (`.bai`, `.fai`,
 `.tbi`) and `.bas` files are staged from beside their parent files.

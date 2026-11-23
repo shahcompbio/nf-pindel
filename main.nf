@@ -23,7 +23,8 @@ params.badloci = null
 params.seqtype = 'WGS'
 
 process PINDEL {
-    container 'quay.io/wtsicgp/cgppindel:3.11.1'
+    // Sanger's quay.io/wtsicgp/cgppindel:3.11.1, mirrored unchanged (same manifest digest)
+    container 'ghcr.io/shahcompbio/cgppindel:3.11.1'
     publishDir params.outdir, mode: 'copy'
 
     input:
